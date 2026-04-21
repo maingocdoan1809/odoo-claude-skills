@@ -1,5 +1,7 @@
 # Troubleshooting
 
+**⚠️ CRITICAL: Read the CRITICAL ENFORCEMENT RULES in SKILL.md FIRST before troubleshooting.**
+
 Quick fixes for common issues encountered during Odoo E2E testing.
 
 ---

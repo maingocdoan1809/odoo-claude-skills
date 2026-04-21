@@ -8,35 +8,55 @@ The test runner agent follows this protocol for every test case.
 
 ---
 
+## ⚠️ VALIDATION GATES (Check before proceeding)
+
+**Before executing ANY test case:**
+
+1. ✅ **test-cases.json exists** — verify file at `./test-runs/<RUN-ID>/test-cases.json`
+2. ✅ **Verify TC structure** — each TC has `id`, `title`, `steps[]`, `expectedResults[]`
+3. ✅ **Check dependencies** — if TC has `dependencies`, verify parent TCs completed first
+4. ✅ **Confirm session mode** — browserMode is either "visible" or "background"
+5. ✅ **Check result.json path** — ensure `./test-runs/<RUN-ID>/<TC-ID>/` folder can be created
+
+**If ANY validation fails:** Log the error and STOP. Do NOT attempt to execute.
+
+---
+
 ## Setup (once per agent)
 
 The setup differs by `browserMode` passed in the agent's context.
 
-> ⚠️ **Critical:** `playwright-cli open` runs **headless (invisible) by default**.
-> To make the browser visible on screen, you **MUST** add `--headed`.
-> Without `--headed`, the user will NOT see any browser window, even in `visible` mode.
+> ⚠️ **CRITICAL HEADED MODE RULE**:
+> - `visible` mode: MUST use `--headed` to make browser visible to user
+> - `background` mode: MUST NOT use `--headed` (headless is correct for parallel agents)
+> - **Each `--headed` browser is a UNIQUE window** — do not share with other agents
 
 ### Mode: `visible` (user watches in real time)
 
-Use a **named persistent session** `-s=odoo` so all commands share the same browser window.
+Use a **named persistent session** `-s=odoo-visible` so all commands share the same browser window.
 
 ```bash
 # MUST use --headed so the browser window appears on screen
-playwright-cli -s=odoo open --headed "<BASE_URL>/web/login"
-playwright-cli -s=odoo snapshot --depth=3
+playwright-cli -s=odoo-visible open --headed "<BASE_URL>/web/login"
+playwright-cli -s=odoo-visible snapshot --depth=3
 ```
 
-All subsequent commands in this agent **must use `-s=odoo`**.
+All subsequent commands in this agent **must use `-s=odoo-visible`**.
 
-### Mode: `background` (parallel / headless-like)
+⚠️ **Only ONE visible session should exist per run.** If testing visible mode, run sequentially.
 
-Each background agent opens its own **anonymous** session (no `-s` flag, no `--headed`).
-These run silently in the background — the user does not see these windows.
+### Mode: `background` (parallel / headless)
+
+Each background agent opens its own **anonymous headless** session (no `-s` flag, NO `--headed`).
+These run silently in the background — the user does NOT see these windows.
 
 ```bash
+# NO -s flag, NO --headed = fresh anonymous headless session
 playwright-cli open "<BASE_URL>/web/login"
 playwright-cli snapshot --depth=3
 ```
+
+Each agent is independent — no session sharing, no window conflicts.
 
 ---
 
@@ -46,12 +66,12 @@ Check the snapshot — if already on the dashboard, skip this section.
 
 ### Visible mode
 ```bash
-playwright-cli -s=odoo snapshot --depth=3
+playwright-cli -s=odoo-visible snapshot --depth=3
 # If login form visible:
-playwright-cli -s=odoo fill "[name=login]" "<username>"
-playwright-cli -s=odoo fill "[name=password]" "<password>"
-playwright-cli -s=odoo click "button[type=submit]"
-playwright-cli -s=odoo screenshot --filename="<TC-DIR>/screenshots/01-login.png"
+playwright-cli -s=odoo-visible fill "[name=login]" "<username>"
+playwright-cli -s=odoo-visible fill "[name=password]" "<password>"
+playwright-cli -s=odoo-visible click "button[type=submit]"
+playwright-cli -s=odoo-visible screenshot --filename="<TC-DIR>/screenshots/01-login.png"
 ```
 
 ### Background mode
@@ -71,7 +91,7 @@ playwright-cli screenshot --filename="<TC-DIR>/screenshots/01-login.png"
 For each step in the test case, execute the corresponding playwright-cli commands.
 
 > **Session prefix rule:**
-> - `visible` mode → prefix every command with `-s=odoo` (e.g. `playwright-cli -s=odoo goto ...`)
+> - `visible` mode → prefix every command with `-s=odoo-visible` (e.g. `playwright-cli -s=odoo-visible goto ...`)
 > - `background` mode → no prefix needed (commands below show background mode for brevity)
 
 ### navigate → ticket-list
@@ -144,26 +164,41 @@ playwright-cli screenshot --filename="<TC-DIR>/screenshots/<N>-save.png"
 ```
 
 ### send-email
+
+⚠️ **CRITICAL: NEVER auto-send emails. Only execute if explicitly in test case steps.**
+
 ```bash
-# 1. Find 宛先 (To) field and fill it
+# 1. Check test case allows email sending
+# If send-email NOT in test_cases.json[TC-ID].steps[] → SKIP this step
+
+# 2. Find 宛先 (To) field and fill it
 playwright-cli click <to-field-ref>
-playwright-cli type "<to-email>"
+# Only type if test case provides explicit email (do NOT guess addresses)
+playwright-cli type "<to-email-from-test-case>"
 playwright-cli press Enter
 
-# 2. Fill subject if provided
+# 3. Fill subject if provided in test case
 playwright-cli fill <subject-ref> "<subject>"
 
-# 3. Fill body if provided
+# 4. Fill body if provided in test case
 playwright-cli click <body-ref>
 playwright-cli type "<body>"
 
-# 4. Screenshot before send
+# 5. Screenshot before send
 playwright-cli screenshot --filename="<TC-DIR>/screenshots/<N>-email-compose.png"
 
-# 5. Click send
+# 6. Click send ONLY if test case explicitly asks for it
+# Do NOT send if test case only asks to "fill" email fields
 playwright-cli click <send-btn-ref>
 playwright-cli screenshot --filename="<TC-DIR>/screenshots/<N>-email-sent.png"
 ```
+
+**Safety rules:**
+- ✅ ALLOWED: Test case says "fill email form and send"
+- ✅ ALLOWED: Test case explicitly defines "to", "subject", "body"
+- ❌ BLOCKED: Sending to real email addresses without test case instruction
+- ❌ BLOCKED: Auto-sending as part of cleanup/self-healing
+- ❌ BLOCKED: Guessing email addresses
 
 ### assert
 

@@ -11,6 +11,7 @@
   "recordType": "01_ヘルプデスク",
   "priority": "high | medium | low",
   "tags": ["smoke", "regression", "happy-path"],
+  "dependencies": ["TC-001"],
   "preconditions": [
     "User is logged in",
     "At least one Partner exists in the system"
@@ -22,37 +23,7 @@
       "action": "navigate",
       "target": "ticket-list"
     },
-    {
-      "step": 2,
-      "description": "Click 新規 to open blank form",
-      "action": "click",
-      "target": "button:新規"
-    },
-    {
-      "step": 3,
-      "description": "Select record type 01_ヘルプデスク",
-      "action": "select-record-type",
-      "value": "01_ヘルプデスク"
-    },
-    {
-      "step": 4,
-      "description": "Fill 件名 (subject)",
-      "action": "fill",
-      "field": "subject",
-      "value": "テスト件名 TC-001"
-    },
-    {
-      "step": 5,
-      "description": "Fill 問合せ者 (partner_id) with first available partner",
-      "action": "fill",
-      "field": "partner_id",
-      "value": "ADMIN-TEST"
-    },
-    {
-      "step": 6,
-      "description": "Save the ticket",
-      "action": "save"
-    }
+    ...
   ],
   "expectedResults": [
     {
@@ -64,6 +35,22 @@
   ]
 }
 ```
+
+### Key fields
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | ✓ | TC-001, TC-002, etc. (assigned by parser) |
+| `title` | ✓ | Test case name |
+| `module` | ✓ | ticket, release, issue, etc. |
+| `action` | ✓ | create, update, delete, workflow, navigate |
+| `recordType` | | Form variant (e.g., "01_ヘルプデスク") |
+| `priority` | | high / medium / low (defaults to medium) |
+| `tags` | | smoke, regression, happy-path, edge-case, etc. |
+| `dependencies` | | Array of TC IDs this TC depends on (e.g., ["TC-001", "TC-003"]) |
+| `preconditions` | | List of setup requirements |
+| `steps` | ✓ | Array of step objects (see below) |
+| `expectedResults` | | Array of assertion objects |
 
 ---
 
@@ -81,6 +68,32 @@
 | `send-email` | Fill mail compose and send | `to`, `subject` (opt), `body` (opt) |
 | `upload` | Upload a file | `field`, `filePath` |
 | `screenshot` | Force a screenshot | `label` (used in filename) |
+
+## Dependencies
+
+The `dependencies` field declares which other test cases must complete successfully before this TC can run:
+
+```json
+{
+  "id": "TC-002",
+  "dependencies": ["TC-001"],
+  ...
+}
+```
+
+**Execution rules:**
+- `TC-001` runs first → result.json is written
+- `TC-002` waits for TC-001 to complete
+- If TC-001 `status: "PASS"` → TC-002 launches
+- If TC-001 `status: "BUG" | "FAIL"` → TC-002 may still run (it documents alternative flows)
+- If TC-002 has multiple dependencies (e.g., `["TC-001", "TC-003"]`) → ALL must complete before TC-002 starts
+
+**When to use:**
+- Multi-step workflows: Create → Update → Verify state change
+- Data dependencies: Test A creates data that Test B validates
+- Sequential validation: Test B tests what Test A set up
+
+For background mode, dependencies enable efficient parallel scheduling (see [parallel-execution.md](parallel-execution.md)).
 
 ## Navigate targets
 
