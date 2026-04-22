@@ -14,10 +14,10 @@ Quick fixes for common issues encountered during Odoo E2E testing.
 
 ```bash
 # ✅ Correct — user sees browser window
-playwright-cli -s=odoo open --headed "http://172.20.108.223/web/login"
+playwright-cli -s=odoo-visible open --headed "http://172.20.108.223/web/login"
 
 # ❌ Wrong — browser runs invisibly even though user expects to see it
-playwright-cli -s=odoo open "http://172.20.108.223/web/login"
+playwright-cli -s=odoo-visible open "http://172.20.108.223/web/login"
 ```
 
 **Rule of thumb:**

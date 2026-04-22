@@ -3,8 +3,9 @@ name: odoo-e2e-test
 description: >
   Self-healing Odoo E2E test framework. Accepts a .docx/.xlsx test case file,
   parses it with an agent, executes each test case via playwright-cli, and
-  generates a single-file HTML dashboard with Bug/Pass/Total counts and fix recommendations.
-  Always asks for target URL and credentials at runtime — nothing is hardcoded.
+  generates a test report (HTML dashboard / Markdown / plain text) with
+  Bug/Pass/Total counts and fix recommendations.
+  Always asks for target URL, credentials, and report format at runtime — nothing is hardcoded.
   Use this skill whenever the user asks to run, automate, or validate any Odoo
   workflow: Ticket, Release, Issue, Change Request, or any other module.
 ---
@@ -30,9 +31,9 @@ description: >
 
 ### Rule 2: MUST ask runtime questions before ANY browser action
 ```
-❌ BLOCKED: Starting browser before gather Q1-Q6
+❌ BLOCKED: Starting browser before gather Q1-Q7
 ❌ BLOCKED: Skipping any question
-✅ ALLOWED: Ask all 6 questions using ask_user (one at a time)
+✅ ALLOWED: Ask all 7 questions using ask_user (one at a time)
 ```
 **Consequence:** Test will not execute; user will be notified.
 
@@ -103,8 +104,8 @@ description: >
 
 **BEFORE starting any execution, the main agent must verify:**
 
-- [ ] `ask_user` was called for Q1-Q6 ✓
-- [ ] `run-config.json` created with masked password ✓
+- [ ] `ask_user` was called for Q1-Q7 ✓
+- [ ] `run-config.json` created with masked password and `reportFormat` ✓
 - [ ] `./test-runs/<RUN-ID>/` folder exists ✓
 - [ ] `test-cases.json` exists and contains valid TC array ✓
 - [ ] Dependencies field checked in each TC (if using background mode) ✓
@@ -134,6 +135,12 @@ Ask these questions one at a time using the `ask_user` tool:
 6. **Special notes / considerations for this test run** (e.g. "Skip payments validation", "Test on staging DB only", "Expect 2 known bugs in module X"):
    - Allow freeform text input
    - This helps document known issues, workarounds, or special setup needed
+7. **Report format** — offer these choices:
+   - **"HTML (Recommended)"** — Dashboard đẹp với ảnh preview lightbox, sẵn sàng gửi cấp trên (self-contained, ảnh nhúng base64)
+   - **"Markdown (.md)"** — Structured text, phù hợp GitHub / tài liệu
+   - **"Plain text (.txt)"** — Tóm tắt văn bản thuần, nhẹ nhất
+   - **"All"** — Tạo cả 3 định dạng cùng lúc
+   - Default nếu user không trả lời: **HTML**
 
 Store all answers as runtime config — **never hardcode** these values in any script.
 
@@ -163,10 +170,13 @@ Save `run-config.json` there (mask the password):
   "password": "***",
   "inputFile": "path/to/testcases.xlsx",
   "browserMode": "visible",
+  "reportFormat": "html",
   "notes": "Skip payments validation, expect 2 known bugs in approval workflow",
   "startedAt": "2026-04-21T08:25:00+07:00"
 }
 ```
+
+Valid values for `reportFormat`: `"html"` | `"md"` | `"txt"` | `"all"`
 
 ### Step 3 — Parse test cases (background agent) → Generate test-cases.json
 
@@ -281,15 +291,44 @@ If a TC has dependencies (e.g., TC-002 depends on TC-001):
 - Do NOT launch TC-002 until TC-001's result.json shows `status: "PASS"`
 - If TC-001 fails/bugs → still proceed (TC-002 may still provide valuable data)
 
-### Step 5 — Generate HTML dashboard (main agent)
+### Step 5 — Generate report (run script)
 
-After all test case agents complete, read all `result.json` files and call the
-`generate-dashboard` logic from:
-`.claude/skills/odoo-e2e-test/references/dashboard-template.md`
+After all test case agents complete, run the report generator script:
 
-Save the dashboard to: `./test-runs/<RUN-ID>/report.html`
+```bash
+python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py \
+  ./test-runs/<RUN-ID> \
+  --format <reportFormat-from-run-config>
+```
 
-Tell the user the path and open it.
+Examples:
+```bash
+# HTML only (default, self-contained with embedded screenshots)
+python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py ./test-runs/RUN-20260421-082500-ticket --format html
+
+# All formats at once
+python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py ./test-runs/RUN-20260421-082500-ticket --format all
+
+# HTML with relative image paths (for local browsing, not for emailing)
+python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py ./test-runs/RUN-20260421-082500-ticket --format html --relative-images
+```
+
+**Script output:**
+- `./test-runs/<RUN-ID>/report.html` — if format is `html` or `all`
+- `./test-runs/<RUN-ID>/report.md`   — if format is `md` or `all`
+- `./test-runs/<RUN-ID>/report.txt`  — if format is `txt` or `all`
+
+**Exit codes:**
+- `0` — success
+- `2` — generated with warnings (e.g. some result.json missing) — still usable
+- `1` — critical failure (run directory not found) — fix the path and retry
+
+**If the script exits with code 2:** Read the warnings printed to stderr. Common fixes:
+- Missing `result.json` for a TC → that TC shows as UNKNOWN in the report; add the result or re-run the TC
+- Missing screenshot file → warning is noted; image is skipped in report
+- Invalid JSON in a result.json → the file path and line number are printed; fix the JSON and re-run
+
+Tell the user the path(s) to the generated report(s) and open the HTML file if it was generated.
 
 ---
 
@@ -336,6 +375,7 @@ See [references/self-healing.md](references/self-healing.md) for full rules.
 - [Execution protocol (step-by-step)](references/execution-protocol.md)
 - [Parallel execution & dependencies](references/parallel-execution.md)
 - [Self-healing rules & BUG criteria](references/self-healing.md)
-- [HTML dashboard template](references/dashboard-template.md)
+- [HTML dashboard template spec](references/dashboard-template.md)
 - [Odoo widget filling guide](references/field-filling.md)
 - [Troubleshooting](references/troubleshooting.md)
+- [Report generator script](scripts/generate-report.py) ← **used in Step 5**
