@@ -33,12 +33,13 @@ This skill contains **9 CRITICAL RULES** (in SKILL.md). When an agent violates a
 
 ## Pre-Flight Validation Checklist
 
-**Every agent MUST check these 8 items before starting any test execution:**
+**Every agent MUST check these 9 items before starting any test execution:**
 
 ```
 [PRE-FLIGHT VALIDATION]
-✓ Q1-Q6 answered and stored in run-config.json
+✓ Q1-Q7 answered and stored in run-config.json
 ✓ run-config.json has masked password (not plaintext)
+✓ run-config.json has reportFormat set (html|md|txt|all)
 ✓ ./test-runs/<RUN-ID>/ folder created
 ✓ run-config.json file exists in that folder
 ✓ test-cases.json exists with valid TC array
@@ -47,7 +48,7 @@ This skill contains **9 CRITICAL RULES** (in SKILL.md). When an agent violates a
 ✓ browserMode is either "visible" or "background"
 
 [BLOCKING GATES]
-✗ If browserMode=="visible" but test-case.json has >1 TC → WARN user (sequential, will take time)
+✗ If browserMode=="visible" but test-cases.json has >1 TC → WARN user (sequential, will take time)
 ✗ If any email step without send-email action → SKIP (don't send)
 ✗ If TC dependencies form a cycle → ABORT (impossible to schedule)
 ✗ If test-cases.json malformed → ABORT (contact user)
@@ -69,6 +70,7 @@ ask_user question 3 → Validate password entered (non-empty)
 ask_user question 4 → Validate file path exists (if provided) OR accept verbal description
 ask_user question 5 → Validate browserMode is "Visible" or "Background"
 ask_user question 6 → Accept freeform notes (can be empty)
+ask_user question 7 → Validate reportFormat is one of: html | md | txt | all (default: html)
 ```
 
 **Enforcement:**
@@ -89,10 +91,10 @@ If user cancels (3 invalid attempts):
 **Validation:**
 ```
 Run ID format: RUN-YYYYMMDD-HHMMSS-<screen-slug>
-  ✓ Must have exactly 3 hyphens
-  ✓ Date must be valid (not 20261332-...)
-  ✓ Time must be valid (not 25:99:99)
-  ✓ Screen slug ≤40 chars, kebab-case only
+  ✓ Must match pattern: RUN-[8 digits]-[6 digits]-[slug]
+  ✓ Date segment must be valid (not 20261332)
+  ✓ Time segment must be valid (not 256199)
+  ✓ Screen slug ≤40 chars, kebab-case only (may contain multiple hyphens)
 
 Folder creation:
   ✓ ./test-runs/ exists (create if not)
@@ -152,10 +154,10 @@ If TCs reference missing dependencies:
 **Validation:**
 ```
 Before launching browser:
-  ✓ Only ONE browser window (-s=odoo-visible --headed)
+  ✓ Only ONE browser window opened
   ✓ TCs will run sequentially (in order)
-  ✓ NO --headed flag in commands → ❌ VIOLATION
-  ✓ Using -s=odoo-visible in ALL commands → ❌ VIOLATION
+  ✓ MUST include --headed in open command → ❌ VIOLATION if missing (browser invisible)
+  ✓ MUST use -s=odoo-visible in ALL commands → ❌ VIOLATION if absent or different
 
 During execution:
   ✓ Screenshot after EVERY step (not just failures)
@@ -166,7 +168,7 @@ During execution:
 **Enforcement:**
 ```
 If --headed missing from open command:
-  🛑 BLOCK: Browser will be invisible
+  🛑 BLOCK: Browser will be invisible to user
   ⚠️ Command must be: playwright-cli -s=odoo-visible open --headed "<URL>"
   
 If using -s=odoo instead of -s=odoo-visible:
@@ -291,8 +293,16 @@ Agent completes TC
 All TCs done
   │
   ├─ All result.json files exist + valid?
-  │  ├─ NO → ❌ Dashboard generation ABORT
-  │  └─ YES → ✅ Generate dashboard
+  │  ├─ NO → ⚠️ WARN — script handles missing files gracefully, still run it
+  │  └─ YES → ✅ Run report generator script
+  │
+Report generation
+  │
+  python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py <run-dir> --format <reportFormat>
+  │
+  ├─ Exit code 0 → ✅ Report ready; tell user path
+  ├─ Exit code 2 → ⚠️ Partial (warnings); report still usable; show warnings to user
+  └─ Exit code 1 → ❌ Critical error; check stderr; fix path/config and retry
 ```
 
 ---
@@ -336,9 +346,11 @@ For **critical violations** (email to real user, password leak):
 
 1. ✅ Read CRITICAL ENFORCEMENT RULES first (SKILL.md § "🚫 CRITICAL ENFORCEMENT RULES")
 2. ✅ Run pre-flight checklist before executing anything
-3. ✅ Respect all 9 rules (no exceptions)
-4. ✅ Ask for clarification if a rule conflicts with user request
-5. ✅ Log every rule check + result
-6. ✅ BLOCK instead of proceed if uncertain
+3. ✅ Ask Q1-Q7 (including report format) before any browser action
+4. ✅ Respect all 9 rules (no exceptions)
+5. ✅ Ask for clarification if a rule conflicts with user request
+6. ✅ Log every rule check + result
+7. ✅ BLOCK instead of proceed if uncertain
+8. ✅ Run `generate-report.py` script in Step 5 — do NOT manually write HTML/MD/TXT
 
 **Key phrase to remember:** "Better to block once than allow one bad action."

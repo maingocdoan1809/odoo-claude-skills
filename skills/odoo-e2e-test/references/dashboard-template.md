@@ -1,13 +1,24 @@
 # HTML Dashboard Template
 
-Generate a **single self-contained HTML file** (`report.html`) with no external dependencies (all CSS/JS inline).
+> **Note:** Report generation is handled automatically by the script at
+> `scripts/generate-report.py`. This document serves as the visual specification
+> and reference for the HTML template structure. Do NOT manually construct
+> the HTML — run the script instead (see SKILL.md § Step 5).
+
+Generate a **single self-contained HTML file** (`report.html`) with no external dependencies
+(all CSS/JS inline, screenshots embedded as base64).
 
 ---
 
 ## Generation logic
 
-After all test cases complete, read all `result.json` files and produce the dashboard using this template.
-Replace all `{{PLACEHOLDERS}}` with real data.
+After all test cases complete, run the script:
+```bash
+python3 .claude/skills/odoo-e2e-test/scripts/generate-report.py ./test-runs/<RUN-ID> --format html
+```
+
+The script reads all `result.json` files and produces the dashboard automatically.
+The template below documents the expected structure for reference.
 
 ---
 
