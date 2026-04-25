@@ -1,0 +1,29 @@
+{
+  "tc_id": "TC004",
+  "title": "Tìm kiếm ticket theo từ khóa tiếng Việt có dấu",
+  "module": "Helpdesk",
+  "status": "failed",
+  "started_at": "2026-04-25T08:30:59.000Z",
+  "finished_at": "2026-04-25T08:31:09.000Z",
+  "duration_ms": 10000,
+  "param_set": {
+    "search_keyword": "đăng nhập"
+  },
+  "steps": [
+    { "step_id": 1, "type": "click", "description": "Click ô tìm kiếm", "status": "passed", "duration_ms": 110 },
+    { "step_id": 2, "type": "fill", "description": "Nhập từ khóa 'đăng nhập'", "status": "passed", "duration_ms": 80 },
+    { "step_id": 3, "type": "press", "description": "Nhấn Enter", "status": "passed", "duration_ms": 950 },
+    { "step_id": 4, "type": "assert", "description": "Kiểm tra kết quả tìm kiếm", "status": "failed", "screenshot": "screenshots/01_no_results.png", "duration_ms": 200, "error": "Tìm kiếm trả về 0 kết quả nhưng có ticket chứa 'đăng nhập' trong tiêu đề" }
+  ],
+  "bugs": [
+    {
+      "step_id": 4,
+      "severity": "medium",
+      "description": "Tìm kiếm không match từ khóa tiếng Việt có dấu — index có vẻ chỉ unicode-fold sai",
+      "screenshot": "screenshots/01_no_results.png",
+      "exception": "Expected: ≥1 ticket containing 'đăng nhập'\nActual: 0 results\nNote: tìm 'dang nhap' (không dấu) thì có 5 kết quả → bug ở normalization"
+    }
+  ],
+  "expected_result": "Hiển thị các ticket có chứa từ 'đăng nhập' trong tiêu đề hoặc mô tả",
+  "actual_result": "Không có kết quả nào, dù có ticket chứa từ này"
+}

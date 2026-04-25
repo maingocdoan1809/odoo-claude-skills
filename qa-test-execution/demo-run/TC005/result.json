@@ -1,0 +1,22 @@
+{
+  "tc_id": "TC005",
+  "title": "Đính kèm file vào ticket",
+  "module": "Helpdesk",
+  "status": "skipped",
+  "started_at": "2026-04-25T08:31:10.000Z",
+  "finished_at": "2026-04-25T08:31:12.000Z",
+  "duration_ms": 2000,
+  "param_set": {
+    "ticket_id": "TKT-2026-0451",
+    "file_path": "/test-data/screenshot_loi.png"
+  },
+  "steps": [
+    { "step_id": 1, "type": "click", "description": "Mở ticket", "status": "passed", "duration_ms": 200 },
+    { "step_id": 2, "type": "assert", "description": "Kiểm tra file test-data tồn tại", "status": "skipped", "duration_ms": 50, "error": "File /test-data/screenshot_loi.png không tồn tại — pre-condition không thỏa" }
+  ],
+  "bugs": [],
+  "expected_result": "File được upload và hiển thị trong tab Attachments",
+  "actual_result": "Skipped — thiếu file test data đầu vào",
+  "_healed": true,
+  "_heal_notes": "result.json gốc bị truncate khi process crash, tái dựng từ memory + screenshots"
+}

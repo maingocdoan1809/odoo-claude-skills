@@ -1,0 +1,23 @@
+{
+  "tc_id": "TC003",
+  "title": "Phân công ticket cho nhân viên hỗ trợ",
+  "module": "Helpdesk",
+  "status": "passed",
+  "started_at": "2026-04-25T08:30:49.000Z",
+  "finished_at": "2026-04-25T08:30:58.000Z",
+  "duration_ms": 9000,
+  "param_set": {
+    "ticket_id": "TKT-2026-0451",
+    "assignee": "Trần Thị Bình",
+    "team": "Hỗ trợ kỹ thuật"
+  },
+  "steps": [
+    { "step_id": 1, "type": "click", "description": "Mở ticket cần phân công", "status": "passed", "duration_ms": 220 },
+    { "step_id": 2, "type": "click", "description": "Mở dropdown Assignee", "status": "passed", "duration_ms": 150 },
+    { "step_id": 3, "type": "click", "description": "Chọn Trần Thị Bình", "status": "passed", "screenshot": "screenshots/01_assignee_picked.png", "duration_ms": 320 },
+    { "step_id": 4, "type": "click", "description": "Lưu", "status": "passed", "screenshot": "screenshots/02_assigned.png", "duration_ms": 800 }
+  ],
+  "bugs": [],
+  "expected_result": "Ticket được phân công cho Trần Thị Bình, gửi email thông báo",
+  "actual_result": "Ticket assigned, email thông báo đã gửi"
+}

@@ -1,0 +1,31 @@
+{
+  "tc_id": "TC002",
+  "title": "Cập nhật trạng thái ticket sang Đã giải quyết",
+  "module": "Helpdesk",
+  "status": "failed",
+  "started_at": "2026-04-25T08:30:15.000Z",
+  "finished_at": "2026-04-25T08:30:48.000Z",
+  "duration_ms": 33000,
+  "param_set": {
+    "ticket_id": "TKT-2026-0451",
+    "new_status": "Đã giải quyết",
+    "resolution_note": "Đã reset password cho khách hàng, hướng dẫn đăng nhập lại"
+  },
+  "steps": [
+    { "step_id": 1, "type": "navigate", "description": "Mở danh sách ticket", "status": "passed", "duration_ms": 250 },
+    { "step_id": 2, "type": "click", "description": "Mở ticket TKT-2026-0451", "status": "passed", "duration_ms": 380 },
+    { "step_id": 3, "type": "click", "description": "Click nút đổi trạng thái", "status": "passed", "screenshot": "screenshots/01_status_dropdown.png", "duration_ms": 200 },
+    { "step_id": 4, "type": "click", "description": "Chọn Đã giải quyết", "status": "failed", "screenshot": "screenshots/02_save_500.png", "duration_ms": 30000, "error": "HTTP 500 — Internal Server Error khi POST /api/ticket/update_status" }
+  ],
+  "bugs": [
+    {
+      "step_id": 4,
+      "severity": "high",
+      "description": "Server trả về lỗi 500 khi cập nhật trạng thái ticket — ảnh hưởng nghiệp vụ chốt ticket",
+      "screenshot": "screenshots/02_save_500.png",
+      "exception": "POST /api/ticket/update_status\nStatus: 500 Internal Server Error\nResponse: {\"error\": \"NullPointerException at TicketService.updateStatus:142\"}"
+    }
+  ],
+  "expected_result": "Trạng thái ticket cập nhật thành Đã giải quyết, ghi chú resolution được lưu",
+  "actual_result": "Server lỗi 500, trạng thái không thay đổi, ghi chú không được lưu"
+}

@@ -1,0 +1,18 @@
+{
+  "tc_id": "TC007",
+  "title": "Xóa ticket - kiểm tra quyền hạn của user thường",
+  "module": "Helpdesk",
+  "status": "error",
+  "started_at": "2026-04-25T08:31:19.000Z",
+  "finished_at": "2026-04-25T08:31:22.000Z",
+  "duration_ms": 3000,
+  "param_set": {
+    "ticket_id": "TKT-2026-0451"
+  },
+  "steps": [
+    { "step_id": 1, "type": "navigate", "description": "Mở ticket", "status": "failed", "duration_ms": 2800, "error": "Redirect tới /web/login — phiên đăng nhập đã hết hạn" }
+  ],
+  "bugs": [],
+  "expected_result": "User thường không có nút Xóa, hoặc bấm Xóa hiện thông báo không có quyền",
+  "actual_result": "Không thể test do session expired giữa chừng"
+}

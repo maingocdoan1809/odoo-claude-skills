@@ -1,0 +1,26 @@
+{
+  "tc_id": "TC001",
+  "title": "Tạo ticket Helpdesk với khách hàng VIP",
+  "module": "Helpdesk",
+  "status": "passed",
+  "started_at": "2026-04-25T08:30:01.000Z",
+  "finished_at": "2026-04-25T08:30:14.000Z",
+  "duration_ms": 13000,
+  "param_set": {
+    "subject": "Lỗi không đăng nhập được vào hệ thống ERP",
+    "customer": "Công ty TNHH Phát Triển Phần Mềm Minh Quân",
+    "priority": "Cao",
+    "assignee": "Nguyễn Văn An"
+  },
+  "steps": [
+    { "step_id": 1, "type": "navigate", "description": "Mở menu Helpdesk → Tickets", "status": "passed", "duration_ms": 320 },
+    { "step_id": 2, "type": "click", "description": "Click nút New", "status": "passed", "duration_ms": 110 },
+    { "step_id": 3, "type": "fill", "description": "Nhập tiêu đề ticket", "status": "passed", "screenshot": "screenshots/01_form_filled.png", "duration_ms": 180 },
+    { "step_id": 4, "type": "click", "description": "Chọn khách hàng từ dropdown", "status": "passed", "duration_ms": 450 },
+    { "step_id": 5, "type": "select-option", "description": "Chọn priority Cao", "status": "passed", "duration_ms": 90 },
+    { "step_id": 6, "type": "click", "description": "Lưu ticket", "status": "passed", "screenshot": "screenshots/02_ticket_saved.png", "duration_ms": 1200 }
+  ],
+  "bugs": [],
+  "expected_result": "Ticket được tạo thành công với trạng thái Mới và mã ticket được sinh tự động",
+  "actual_result": "Ticket TKT-2026-0451 được tạo, trạng thái Mới, hiển thị trên danh sách"
+}

@@ -1,0 +1,26 @@
+{
+  "tc_id": "TC006",
+  "title": "Hiển thị badge số ticket chưa xử lý ở menu",
+  "module": "Helpdesk",
+  "status": "failed",
+  "started_at": "2026-04-25T08:31:13.000Z",
+  "finished_at": "2026-04-25T08:31:18.000Z",
+  "duration_ms": 5000,
+  "param_set": {},
+  "steps": [
+    { "step_id": 1, "type": "navigate", "description": "Mở trang chủ", "status": "passed", "duration_ms": 280 },
+    { "step_id": 2, "type": "evaluate", "description": "Đếm số ticket Mới qua API", "status": "passed", "duration_ms": 320 },
+    { "step_id": 3, "type": "assert", "description": "Kiểm tra badge menu Helpdesk khớp với số đếm", "status": "failed", "screenshot": "screenshots/01_badge_wrong.png", "duration_ms": 100, "error": "Badge hiển thị 7, API trả về 12 ticket Mới" }
+  ],
+  "bugs": [
+    {
+      "step_id": 3,
+      "severity": "low",
+      "description": "Badge số ticket Mới ở menu hiển thị sai — chênh 5 ticket so với API. Không chặn nghiệp vụ nhưng gây nhầm lẫn",
+      "screenshot": "screenshots/01_badge_wrong.png",
+      "exception": "Badge text: '7'\nAPI count: 12\nDifference: 5"
+    }
+  ],
+  "expected_result": "Badge hiển thị đúng số ticket có trạng thái Mới",
+  "actual_result": "Badge hiển thị 7 nhưng thực tế có 12 ticket Mới"
+}

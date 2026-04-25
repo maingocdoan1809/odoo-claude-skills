@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>QA Test Report — https://erp.minhquan.vn</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f5f7; color: #1d1d1f; }
+  header { background: #fff; padding: 24px 32px; border-bottom: 1px solid #e0e0e5; }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  header .meta { color: #6e6e73; font-size: 13px; margin-top: 6px; }
+  .container { max-width: 1280px; margin: 24px auto; padding: 0 24px; }
+
+  /* Card groups */
+  .card-group { margin-bottom: 16px; }
+  .card-group-label { font-size: 11px; text-transform: uppercase; color: #6e6e73; letter-spacing: 0.6px; font-weight: 600; margin: 0 4px 10px; }
+  .cards { display: grid; gap: 12px; }
+  .cards.outcomes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .cards.bugs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 900px) {
+    .cards.outcomes, .cards.bugs { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  }
+  .card {
+    background: #fff; padding: 18px; border-radius: 12px; border: 1px solid #e0e0e5;
+    transition: transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s, border-color 0.18s;
+    opacity: 0; animation: fadeInUp 0.45s cubic-bezier(0.4,0,0.2,1) forwards;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+  .card .label { font-size: 11px; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .card .value { font-size: 32px; font-weight: 600; margin-top: 6px; line-height: 1; }
+  .card.passed .value { color: #34c759; }
+  .card.failed .value { color: #ff3b30; }
+  .card.skipped .value { color: #ff9500; }
+  .card.error .value { color: #af52de; }
+  .card.bug .value { color: #ff3b30; }
+  .card.bug.high { border-color: #ff3b30; }
+  .card.bug.medium { border-color: #ff9500; }
+  .card.bug.low { border-color: #ffd60a; }
+  .card.zero .value { color: #c7c7cc; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .card:nth-child(1) { animation-delay: 0.00s; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.10s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+  .card:nth-child(5) { animation-delay: 0.20s; }
+
+  h2 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+
+  /* Filter toolbar */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+  .filter {
+    background: #fff; border: 1px solid #e0e0e5; padding: 7px 14px; border-radius: 999px;
+    font-size: 13px; cursor: pointer; color: #1d1d1f; transition: all 0.12s; font-weight: 500;
+  }
+  .filter:hover { background: #f0f0f3; }
+  .filter.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  .filter .count { display: inline-block; margin-left: 6px; font-size: 11px; color: #6e6e73; font-weight: 600; }
+  .filter.active .count { color: #c7c7cc; }
+
+  /* Bug summary */
+  .bug-summary { background: #fff; border: 1px solid #e0e0e5; border-radius: 12px; padding: 4px 0; margin-bottom: 8px; }
+  .bug-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #f5f5f7; font-size: 13px; }
+  .bug-row:last-child { border: 0; }
+  .bug-row a.tc-link { color: #007aff; text-decoration: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; flex-shrink: 0; padding-top: 1px; }
+  .bug-row a.tc-link:hover { text-decoration: underline; }
+  .bug-row .desc { flex: 1; }
+  .bug-empty { padding: 14px 16px; color: #6e6e73; font-size: 13px; font-style: italic; }
+  details.sev-group { margin: 0; }
+  details.sev-group > summary { list-style: none; cursor: pointer; padding: 10px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #6e6e73; font-weight: 600; user-select: none; border-bottom: 1px solid #f5f5f7; }
+  details.sev-group > summary::-webkit-details-marker { display: none; }
+  details.sev-group > summary::before { content: '▶'; display: inline-block; margin-right: 8px; transition: transform 0.15s; font-size: 9px; }
+  details.sev-group[open] > summary::before { transform: rotate(90deg); }
+  details.sev-group:last-child > summary { border-bottom: 0; }
+  details.sev-group[open] > summary { border-bottom: 1px solid #f5f5f7; }
+
+  /* Testcases */
+  .tc { background: #fff; border: 1px solid #e0e0e5; border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.15s; scroll-margin-top: 16px; }
+  .tc.flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(0,122,255,0.5); } 100% { box-shadow: 0 0 0 8px rgba(0,122,255,0); } }
+  .tc-header { padding: 14px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; user-select: none; }
+  .tc-header:hover { background: #fafafa; }
+  .tc-title { font-weight: 500; }
+  .tc-id { color: #6e6e73; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; margin-right: 8px; }
+  .tc-meta { color: #6e6e73; font-size: 12px; }
+  .tc-status { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .tc-status.passed { background: #d1f7d6; color: #1f7a30; }
+  .tc-status.failed { background: #ffd9d6; color: #b3251c; }
+  .tc-status.skipped { background: #ffe9c2; color: #8a5a00; }
+  .tc-status.error { background: #efd9ff; color: #6b1fa3; }
+  .tc-bugcount { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700; }
+  .tc-body { padding: 0 18px 18px; display: none; border-top: 1px solid #f0f0f3; }
+  .tc-body.open { display: block; }
+  .tc.healed { border-style: dashed; }
+  .heal-banner { background: #fff8e1; border-left: 3px solid #ff9500; padding: 8px 12px; margin: 12px 0; border-radius: 4px; font-size: 12px; color: #6e4f00; }
+
+  .section-title { font-size: 12px; text-transform: uppercase; color: #6e6e73; letter-spacing: 0.5px; margin: 16px 0 8px; font-weight: 600; }
+
+  /* Steps */
+  .step { padding: 10px 0; border-bottom: 1px solid #f5f5f7; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .step:last-child { border: 0; }
+  .step .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+  .step .dot.passed { background: #34c759; }
+  .step .dot.failed { background: #ff3b30; }
+  .step .dot.skipped { background: #ff9500; }
+  .step .desc { flex: 1; min-width: 0; }
+  .step .dur { color: #6e6e73; font-size: 11px; flex-shrink: 0; }
+  .step .err { color: #b3251c; font-size: 12px; margin-top: 3px; }
+  .step .inline-thumb { display: inline-block; margin-left: 8px; vertical-align: middle; border-radius: 4px; overflow: hidden; cursor: pointer; border: 1px solid #e0e0e5; transition: transform 0.1s; }
+  .step .inline-thumb:hover { transform: scale(1.06); }
+  .step .inline-thumb img { width: 80px; height: 50px; object-fit: cover; display: block; }
+
+  /* Bugs in TC body */
+  .bug { background: #fff5f5; padding: 10px 12px; border-left: 3px solid #ff3b30; margin: 8px 0; border-radius: 4px; font-size: 13px; }
+  .bug .sev { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-right: 6px; }
+  .sev.high { background: #ff3b30; color: #fff; }
+  .sev.medium { background: #ff9500; color: #fff; }
+  .sev.low { background: #ffd60a; color: #1d1d1f; }
+  .bug .ex { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #6e6e73; margin-top: 6px; white-space: pre-wrap; background: #fff; padding: 6px 8px; border-radius: 4px; }
+
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .thumb { display: inline-block; border-radius: 6px; overflow: hidden; cursor: pointer; border: 1px solid #e0e0e5; transition: transform 0.1s; }
+  .thumb:hover { transform: scale(1.04); }
+  .thumb img { width: 140px; height: 90px; object-fit: cover; display: block; }
+  .params { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: #f5f5f7; padding: 8px 12px; border-radius: 6px; white-space: pre-wrap; }
+
+  /* Lightbox */
+  .lb { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.94); z-index: 1000; align-items: center; justify-content: center; }
+  .lb.open { display: flex; }
+  .lb img { max-width: 92vw; max-height: 84vh; object-fit: contain; box-shadow: 0 4px 32px rgba(0,0,0,0.5); }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); color: #fff; border: 0; font-size: 32px; padding: 12px 20px; cursor: pointer; border-radius: 8px; }
+  .lb-nav:hover { background: rgba(255,255,255,0.25); }
+  .lb-prev { left: 24px; }
+  .lb-next { right: 24px; }
+  .lb-close { position: absolute; top: 24px; right: 24px; background: rgba(255,255,255,0.1); color: #fff; border: 0; font-size: 14px; padding: 10px 16px; cursor: pointer; border-radius: 8px; }
+  .lb-close:hover { background: rgba(255,255,255,0.25); }
+  .lb-caption { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.6); padding: 8px 16px; border-radius: 8px; max-width: 80vw; text-align: center; }
+  .lb-counter { position: absolute; top: 24px; left: 24px; color: #fff; font-size: 13px; background: rgba(0,0,0,0.6); padding: 8px 14px; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+</head>
+<body>
+<header>
+  <h1>QA Test Execution Report</h1>
+  <div class="meta">
+    <strong>https://erp.minhquan.vn</strong> &bull; 
+    Mode: headed &bull; 
+    Started: 2026-04-25T08:30:00.000Z &bull;
+    Finished: 2026-04-25T16:00:04.677Z
+  </div>
+</header>
+<div class="container">
+
+  <div class="card-group">
+    <div class="card-group-label">Outcomes</div>
+    <div class="cards outcomes">
+      <div class="card"><div class="label">Total</div><div class="value">7</div></div>
+      <div class="card passed "><div class="label">Passed</div><div class="value">2</div></div>
+      <div class="card failed "><div class="label">Failed</div><div class="value">3</div></div>
+      <div class="card skipped "><div class="label">Skipped</div><div class="value">1</div></div>
+      <div class="card error "><div class="label">Error</div><div class="value">1</div></div>
+    </div>
+  </div>
+
+  <div class="card-group">
+    <div class="card-group-label">Bugs</div>
+    <div class="cards bugs">
+      <div class="card bug "><div class="label">Bugs</div><div class="value">3</div></div>
+      <div class="card bug high "><div class="label">High</div><div class="value">1</div></div>
+      <div class="card bug medium "><div class="label">Medium</div><div class="value">1</div></div>
+      <div class="card bug low "><div class="label">Low</div><div class="value">1</div></div>
+    </div>
+  </div>
+
+  <h2>Bugs (3)</h2><div class="bug-summary">
+    <details class="sev-group" open>
+      <summary><span class="sev high" style="margin-right:8px;padding:2px 8px;font-size:10px;border-radius:4px;">HIGH</span>1 bug</summary>
+      
+        <div class="bug-row">
+          <a class="tc-link" href="#tc-TC002" onclick="jumpToTC('TC002', event)">TC002</a>
+          <div class="desc">Server trả về lỗi 500 khi cập nhật trạng thái ticket — ảnh hưởng nghiệp vụ chốt ticket<div style="color:#6e6e73;font-size:12px;margin-top:2px;">Cập nhật trạng thái ticket sang Đã giải quyết</div></div>
+        </div>
+      
+    </details>
+  
+    <details class="sev-group" open>
+      <summary><span class="sev medium" style="margin-right:8px;padding:2px 8px;font-size:10px;border-radius:4px;">MEDIUM</span>1 bug</summary>
+      
+        <div class="bug-row">
+          <a class="tc-link" href="#tc-TC004" onclick="jumpToTC('TC004', event)">TC004</a>
+          <div class="desc">Tìm kiếm không match từ khóa tiếng Việt có dấu — index có vẻ chỉ unicode-fold sai<div style="color:#6e6e73;font-size:12px;margin-top:2px;">Tìm kiếm ticket theo từ khóa tiếng Việt có dấu</div></div>
+        </div>
+      
+    </details>
+  
+    <details class="sev-group" open>
+      <summary><span class="sev low" style="margin-right:8px;padding:2px 8px;font-size:10px;border-radius:4px;">LOW</span>1 bug</summary>
+      
+        <div class="bug-row">
+          <a class="tc-link" href="#tc-TC006" onclick="jumpToTC('TC006', event)">TC006</a>
+          <div class="desc">Badge số ticket Mới ở menu hiển thị sai — chênh 5 ticket so với API. Không chặn nghiệp vụ nhưng gây nhầm lẫn<div style="color:#6e6e73;font-size:12px;margin-top:2px;">Hiển thị badge số ticket chưa xử lý ở menu</div></div>
+        </div>
+      
+    </details>
+  </div>
+
+  <h2>Testcases</h2>
+  <div class="filters"><button class="filter active" data-filter="all" onclick="applyFilter('all', this)">All<span class="count">7</span></button><button class="filter" data-filter="passed" onclick="applyFilter('passed', this)">Passed<span class="count">2</span></button><button class="filter" data-filter="failed" onclick="applyFilter('failed', this)">Failed<span class="count">3</span></button><button class="filter" data-filter="skipped" onclick="applyFilter('skipped', this)">Skipped<span class="count">1</span></button><button class="filter" data-filter="error" onclick="applyFilter('error', this)">Error<span class="count">1</span></button><button class="filter" data-filter="bugs" onclick="applyFilter('bugs', this)">Bugs only<span class="count">3</span></button></div>
+  <div id="tc-list">
+    
+<div class="tc" id="tc-TC001" data-status="passed" data-bugs="0" data-idx="0">
+  <div class="tc-header" onclick="toggleTC(0, event)">
+    <div>
+      <span class="tc-id">TC001</span>
+      <span class="tc-title">Tạo ticket Helpdesk với khách hàng VIP</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      
+      <span class="tc-meta" style="margin-left:8px;">13.0s</span>
+      <span class="tc-status passed" style="margin-left:8px;">passed</span>
+    </div>
+  </div>
+  <div class="tc-body" id="tc-body-0">
+    
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;subject&quot;: &quot;Lỗi không đăng nhập được vào hệ thống ERP&quot;,
+  &quot;customer&quot;: &quot;Công ty TNHH Phát Triển Phần Mềm Minh Quân&quot;,
+  &quot;priority&quot;: &quot;Cao&quot;,
+  &quot;assignee&quot;: &quot;Nguyễn Văn An&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở menu Helpdesk → Tickets</div>
+        
+      </div>
+      <div class="dur">320ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Click nút New</div>
+        
+      </div>
+      <div class="dur">110ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Nhập tiêu đề ticket<a class="inline-thumb" onclick="openLB(0)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvBzmIQAIe+JAlTSpgn83aB4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLrBGJKCGXf/PAAAAAElFTkSuQmCC" alt=""></a></div>
+        
+      </div>
+      <div class="dur">180ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Chọn khách hàng từ dropdown</div>
+        
+      </div>
+      <div class="dur">450ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Chọn priority Cao</div>
+        
+      </div>
+      <div class="dur">90ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Lưu ticket<a class="inline-thumb" onclick="openLB(1)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQkAMAzAwPpXVjmTMA/7jMDBCcgns2eBqPleADwzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIewCS7skoC/bvHgAAAAASUVORK5CYII=" alt=""></a></div>
+        
+      </div>
+      <div class="dur">1200ms</div>
+    </div>
+    
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> Ticket được tạo thành công với trạng thái Mới và mã ticket được sinh tự động</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Ticket TKT-2026-0451 được tạo, trạng thái Mới, hiển thị trên danh sách</div>
+       </div>
+    <div class="section-title">All Screenshots</div><div class="thumbs"><a class="thumb" onclick="openLB(0)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvBzmIQAIe+JAlTSpgn83aB4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLrBGJKCGXf/PAAAAAElFTkSuQmCC" alt="01_form_filled.png"></a><a class="thumb" onclick="openLB(1)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQkAMAzAwPpXVjmTMA/7jMDBCcgns2eBqPleADwzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIewCS7skoC/bvHgAAAAASUVORK5CYII=" alt="02_ticket_saved.png"></a></div>
+  </div>
+</div>
+
+<div class="tc" id="tc-TC002" data-status="failed" data-bugs="1" data-idx="1">
+  <div class="tc-header" onclick="toggleTC(1, event)">
+    <div>
+      <span class="tc-id">TC002</span>
+      <span class="tc-title">Cập nhật trạng thái ticket sang Đã giải quyết</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      <span class="tc-bugcount">1 bug</span>
+      <span class="tc-meta" style="margin-left:8px;">33.0s</span>
+      <span class="tc-status failed" style="margin-left:8px;">failed</span>
+    </div>
+  </div>
+  <div class="tc-body open" id="tc-body-1">
+    
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;ticket_id&quot;: &quot;TKT-2026-0451&quot;,
+  &quot;new_status&quot;: &quot;Đã giải quyết&quot;,
+  &quot;resolution_note&quot;: &quot;Đã reset password cho khách hàng, hướng dẫn đăng nhập lại&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở danh sách ticket</div>
+        
+      </div>
+      <div class="dur">250ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở ticket TKT-2026-0451</div>
+        
+      </div>
+      <div class="dur">380ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Click nút đổi trạng thái<a class="inline-thumb" onclick="openLB(2)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TMQkAMBDAwPcv9OdKqIcuJXBwArJkdg8QNd8LgGcGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhF3/0cAGu8wqAwAAAABJRU5ErkJggg==" alt=""></a></div>
+        
+      </div>
+      <div class="dur">200ms</div>
+    </div>
+    <div class="step">
+      <div class="dot failed"></div>
+      <div class="desc">
+        <div>Chọn Đã giải quyết<a class="inline-thumb" onclick="openLB(3)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TQQkAMAzAwPpXVlebh31G4OAE5JM5u0DUfC8AnhkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQdgEjEMtyIMxBBAAAAABJRU5ErkJggg==" alt=""></a></div>
+        <div class="err">HTTP 500 — Internal Server Error khi POST /api/ticket/update_status</div>
+      </div>
+      <div class="dur">30000ms</div>
+    </div>
+    <div class="section-title">Bugs</div>
+    <div class="bug">
+      <span class="sev high">high</span>
+      Server trả về lỗi 500 khi cập nhật trạng thái ticket — ảnh hưởng nghiệp vụ chốt ticket<a class="inline-thumb" onclick="openLB(3)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TQQkAMAzAwPpXVlebh31G4OAE5JM5u0DUfC8AnhkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQdgEjEMtyIMxBBAAAAABJRU5ErkJggg==" alt=""></a>
+      <div class="ex">POST /api/ticket/update_status
+Status: 500 Internal Server Error
+Response: {&quot;error&quot;: &quot;NullPointerException at TicketService.updateStatus:142&quot;}</div>
+    </div>
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> Trạng thái ticket cập nhật thành Đã giải quyết, ghi chú resolution được lưu</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Server lỗi 500, trạng thái không thay đổi, ghi chú không được lưu</div>
+       </div>
+    <div class="section-title">All Screenshots</div><div class="thumbs"><a class="thumb" onclick="openLB(2)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TMQkAMBDAwPcv9OdKqIcuJXBwArJkdg8QNd8LgGcGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhF3/0cAGu8wqAwAAAABJRU5ErkJggg==" alt="01_status_dropdown.png"></a><a class="thumb" onclick="openLB(3)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TQQkAMAzAwPpXVlebh31G4OAE5JM5u0DUfC8AnhkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQdgEjEMtyIMxBBAAAAABJRU5ErkJggg==" alt="02_save_500.png"></a></div>
+  </div>
+</div>
+
+<div class="tc" id="tc-TC003" data-status="passed" data-bugs="0" data-idx="2">
+  <div class="tc-header" onclick="toggleTC(2, event)">
+    <div>
+      <span class="tc-id">TC003</span>
+      <span class="tc-title">Phân công ticket cho nhân viên hỗ trợ</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      
+      <span class="tc-meta" style="margin-left:8px;">9.0s</span>
+      <span class="tc-status passed" style="margin-left:8px;">passed</span>
+    </div>
+  </div>
+  <div class="tc-body" id="tc-body-2">
+    
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;ticket_id&quot;: &quot;TKT-2026-0451&quot;,
+  &quot;assignee&quot;: &quot;Trần Thị Bình&quot;,
+  &quot;team&quot;: &quot;Hỗ trợ kỹ thuật&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở ticket cần phân công</div>
+        
+      </div>
+      <div class="dur">220ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở dropdown Assignee</div>
+        
+      </div>
+      <div class="dur">150ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Chọn Trần Thị Bình<a class="inline-thumb" onclick="openLB(4)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TsQkAIBDAwN9/RmuHsHIHGwkc3ABpMnsdIGq+FwDPDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAi7O0rABjA7SacAAAAASUVORK5CYII=" alt=""></a></div>
+        
+      </div>
+      <div class="dur">320ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Lưu<a class="inline-thumb" onclick="openLB(5)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvDBGIQAIe+JAlTSpgn806G4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLpV4rb3Ox3/KAAAAAElFTkSuQmCC" alt=""></a></div>
+        
+      </div>
+      <div class="dur">800ms</div>
+    </div>
+    
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> Ticket được phân công cho Trần Thị Bình, gửi email thông báo</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Ticket assigned, email thông báo đã gửi</div>
+       </div>
+    <div class="section-title">All Screenshots</div><div class="thumbs"><a class="thumb" onclick="openLB(4)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TsQkAIBDAwN9/RmuHsHIHGwkc3ABpMnsdIGq+FwDPDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAi7O0rABjA7SacAAAAASUVORK5CYII=" alt="01_assignee_picked.png"></a><a class="thumb" onclick="openLB(5)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvDBGIQAIe+JAlTSpgn806G4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLpV4rb3Ox3/KAAAAAElFTkSuQmCC" alt="02_assigned.png"></a></div>
+  </div>
+</div>
+
+<div class="tc" id="tc-TC004" data-status="failed" data-bugs="1" data-idx="3">
+  <div class="tc-header" onclick="toggleTC(3, event)">
+    <div>
+      <span class="tc-id">TC004</span>
+      <span class="tc-title">Tìm kiếm ticket theo từ khóa tiếng Việt có dấu</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      <span class="tc-bugcount">1 bug</span>
+      <span class="tc-meta" style="margin-left:8px;">10.0s</span>
+      <span class="tc-status failed" style="margin-left:8px;">failed</span>
+    </div>
+  </div>
+  <div class="tc-body open" id="tc-body-3">
+    
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;search_keyword&quot;: &quot;đăng nhập&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Click ô tìm kiếm</div>
+        
+      </div>
+      <div class="dur">110ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Nhập từ khóa &#39;đăng nhập&#39;</div>
+        
+      </div>
+      <div class="dur">80ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Nhấn Enter</div>
+        
+      </div>
+      <div class="dur">950ms</div>
+    </div>
+    <div class="step">
+      <div class="dot failed"></div>
+      <div class="desc">
+        <div>Kiểm tra kết quả tìm kiếm<a class="inline-thumb" onclick="openLB(6)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvBzl4AQ98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXrC3Lck7tNq0AAAAASUVORK5CYII=" alt=""></a></div>
+        <div class="err">Tìm kiếm trả về 0 kết quả nhưng có ticket chứa &#39;đăng nhập&#39; trong tiêu đề</div>
+      </div>
+      <div class="dur">200ms</div>
+    </div>
+    <div class="section-title">Bugs</div>
+    <div class="bug">
+      <span class="sev medium">medium</span>
+      Tìm kiếm không match từ khóa tiếng Việt có dấu — index có vẻ chỉ unicode-fold sai<a class="inline-thumb" onclick="openLB(6)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvBzl4AQ98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXrC3Lck7tNq0AAAAASUVORK5CYII=" alt=""></a>
+      <div class="ex">Expected: ≥1 ticket containing &#39;đăng nhập&#39;
+Actual: 0 results
+Note: tìm &#39;dang nhap&#39; (không dấu) thì có 5 kết quả → bug ở normalization</div>
+    </div>
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> Hiển thị các ticket có chứa từ &#39;đăng nhập&#39; trong tiêu đề hoặc mô tả</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Không có kết quả nào, dù có ticket chứa từ này</div>
+       </div>
+    <div class="section-title">All Screenshots</div><div class="thumbs"><a class="thumb" onclick="openLB(6)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvBzl4AQ98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXrC3Lck7tNq0AAAAASUVORK5CYII=" alt="01_no_results.png"></a></div>
+  </div>
+</div>
+
+<div class="tc healed" id="tc-TC005" data-status="skipped" data-bugs="0" data-idx="4">
+  <div class="tc-header" onclick="toggleTC(4, event)">
+    <div>
+      <span class="tc-id">TC005</span>
+      <span class="tc-title">Đính kèm file vào ticket</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      
+      <span class="tc-meta" style="margin-left:8px;">2.0s</span>
+      <span class="tc-status skipped" style="margin-left:8px;">skipped</span>
+    </div>
+  </div>
+  <div class="tc-body open" id="tc-body-4">
+    <div class="heal-banner"><strong>⚠ Self-healed:</strong> result.json gốc bị truncate khi process crash, tái dựng từ memory + screenshots</div>
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;ticket_id&quot;: &quot;TKT-2026-0451&quot;,
+  &quot;file_path&quot;: &quot;/test-data/screenshot_loi.png&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở ticket</div>
+        
+      </div>
+      <div class="dur">200ms</div>
+    </div>
+    <div class="step">
+      <div class="dot skipped"></div>
+      <div class="desc">
+        <div>Kiểm tra file test-data tồn tại</div>
+        <div class="err">File /test-data/screenshot_loi.png không tồn tại — pre-condition không thỏa</div>
+      </div>
+      <div class="dur">50ms</div>
+    </div>
+    
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> File được upload và hiển thị trong tab Attachments</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Skipped — thiếu file test data đầu vào</div>
+       </div>
+    
+  </div>
+</div>
+
+<div class="tc" id="tc-TC006" data-status="failed" data-bugs="1" data-idx="5">
+  <div class="tc-header" onclick="toggleTC(5, event)">
+    <div>
+      <span class="tc-id">TC006</span>
+      <span class="tc-title">Hiển thị badge số ticket chưa xử lý ở menu</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      <span class="tc-bugcount">1 bug</span>
+      <span class="tc-meta" style="margin-left:8px;">5.0s</span>
+      <span class="tc-status failed" style="margin-left:8px;">failed</span>
+    </div>
+  </div>
+  <div class="tc-body open" id="tc-body-5">
+    
+    
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Mở trang chủ</div>
+        
+      </div>
+      <div class="dur">280ms</div>
+    </div>
+    <div class="step">
+      <div class="dot passed"></div>
+      <div class="desc">
+        <div>Đếm số ticket Mới qua API</div>
+        
+      </div>
+      <div class="dur">320ms</div>
+    </div>
+    <div class="step">
+      <div class="dot failed"></div>
+      <div class="desc">
+        <div>Kiểm tra badge menu Helpdesk khớp với số đếm<a class="inline-thumb" onclick="openLB(7)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvB2E4AA98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXfxZUnhkmbpUAAAAASUVORK5CYII=" alt=""></a></div>
+        <div class="err">Badge hiển thị 7, API trả về 12 ticket Mới</div>
+      </div>
+      <div class="dur">100ms</div>
+    </div>
+    <div class="section-title">Bugs</div>
+    <div class="bug">
+      <span class="sev low">low</span>
+      Badge số ticket Mới ở menu hiển thị sai — chênh 5 ticket so với API. Không chặn nghiệp vụ nhưng gây nhầm lẫn<a class="inline-thumb" onclick="openLB(7)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvB2E4AA98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXfxZUnhkmbpUAAAAASUVORK5CYII=" alt=""></a>
+      <div class="ex">Badge text: &#39;7&#39;
+API count: 12
+Difference: 5</div>
+    </div>
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> Badge hiển thị đúng số ticket có trạng thái Mới</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Badge hiển thị 7 nhưng thực tế có 12 ticket Mới</div>
+       </div>
+    <div class="section-title">All Screenshots</div><div class="thumbs"><a class="thumb" onclick="openLB(7)"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvB2E4AA98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXfxZUnhkmbpUAAAAASUVORK5CYII=" alt="01_badge_wrong.png"></a></div>
+  </div>
+</div>
+
+<div class="tc" id="tc-TC007" data-status="error" data-bugs="0" data-idx="6">
+  <div class="tc-header" onclick="toggleTC(6, event)">
+    <div>
+      <span class="tc-id">TC007</span>
+      <span class="tc-title">Xóa ticket - kiểm tra quyền hạn của user thường</span>
+      <span class="tc-meta"> &bull; Helpdesk</span>
+    </div>
+    <div>
+      
+      <span class="tc-meta" style="margin-left:8px;">3.0s</span>
+      <span class="tc-status error" style="margin-left:8px;">error</span>
+    </div>
+  </div>
+  <div class="tc-body open" id="tc-body-6">
+    
+    <div class="section-title">Parameters</div><div class="params">{
+  &quot;ticket_id&quot;: &quot;TKT-2026-0451&quot;
+}</div>
+    <div class="section-title">Steps</div>
+    <div class="step">
+      <div class="dot failed"></div>
+      <div class="desc">
+        <div>Mở ticket</div>
+        <div class="err">Redirect tới /web/login — phiên đăng nhập đã hết hạn</div>
+      </div>
+      <div class="dur">2800ms</div>
+    </div>
+    
+    <div class="section-title">Expected vs Actual</div>
+       <div style="font-size: 13px;">
+         <div><strong>Expected:</strong> User thường không có nút Xóa, hoặc bấm Xóa hiện thông báo không có quyền</div>
+         <div style="margin-top: 4px;"><strong>Actual:</strong> Không thể test do session expired giữa chừng</div>
+       </div>
+    
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="lb" id="lb">
+  <div class="lb-counter" id="lb-counter"></div>
+  <button class="lb-close" onclick="closeLB()">Close ✕</button>
+  <button class="lb-nav lb-prev" onclick="navLB(-1)">‹</button>
+  <img id="lb-img" src="" alt="">
+  <button class="lb-nav lb-next" onclick="navLB(1)">›</button>
+  <div class="lb-caption" id="lb-cap"></div>
+</div>
+
+<script>
+const SHOTS = [{"tc":"TC001","title":"Nhập tiêu đề ticket","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvBzmIQAIe+JAlTSpgn83aB4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLrBGJKCGXf/PAAAAAElFTkSuQmCC"},{"tc":"TC001","title":"Lưu ticket","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQkAMAzAwPpXVjmTMA/7jMDBCcgns2eBqPleADwzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIewCS7skoC/bvHgAAAAASUVORK5CYII="},{"tc":"TC002","title":"Click nút đổi trạng thái","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TMQkAMBDAwPcv9OdKqIcuJXBwArJkdg8QNd8LgGcGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhF3/0cAGu8wqAwAAAABJRU5ErkJggg=="},{"tc":"TC002","title":"Chọn Đã giải quyết","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACX0lEQVR4nO3TQQkAMAzAwPpXVlebh31G4OAE5JM5u0DUfC8AnhkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQdgEjEMtyIMxBBAAAAABJRU5ErkJggg=="},{"tc":"TC003","title":"Chọn Trần Thị Bình","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TsQkAIBDAwN9/RmuHsHIHGwkc3ABpMnsdIGq+FwDPDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAi7O0rABjA7SacAAAAASUVORK5CYII="},{"tc":"TC003","title":"Lưu","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYUlEQVR4nO3TQQ0AIBDAsPOvDBGIQAIe+JAlTSpgn806G4ia7wXAMwNDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCLpV4rb3Ox3/KAAAAAElFTkSuQmCC"},{"tc":"TC004","title":"Kiểm tra kết quả tìm kiếm","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvBzl4AQ98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXrC3Lck7tNq0AAAAASUVORK5CYII="},{"tc":"TC006","title":"Kiểm tra badge menu Helpdesk khớp với số đếm","src":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADICAIAAAAWZq/8AAACYElEQVR4nO3TQQ0AIBDAsPOvB2E4AA98yJImFbDP5uwFRM33AuCZgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEGhjADQ5iBIczAEGZgCDMwhBkYwgwMYQaGMANDmIEhzMAQZmAIMzCEGRjCDAxhBoYwA0OYgSHMwBBmYAgzMIQZGMIMDGEXfxZUnhkmbpUAAAAASUVORK5CYII="}];
+let lbIdx = 0;
+function openLB(i) { lbIdx = i; show(); document.getElementById('lb').classList.add('open'); }
+function closeLB() { document.getElementById('lb').classList.remove('open'); }
+function navLB(d) { if (!SHOTS.length) return; lbIdx = (lbIdx + d + SHOTS.length) % SHOTS.length; show(); }
+function show() {
+  const s = SHOTS[lbIdx];
+  document.getElementById('lb-img').src = s.src;
+  document.getElementById('lb-cap').textContent = s.tc + ' — ' + s.title;
+  document.getElementById('lb-counter').textContent = (lbIdx + 1) + ' / ' + SHOTS.length;
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lb').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') navLB(-1);
+  else if (e.key === 'ArrowRight') navLB(1);
+  else if (e.key === 'Escape') closeLB();
+});
+document.getElementById('lb').addEventListener('click', e => {
+  if (e.target.id === 'lb') closeLB();
+});
+function toggleTC(idx, ev) {
+  if (ev) ev.stopPropagation();
+  document.getElementById('tc-body-' + idx).classList.toggle('open');
+}
+function applyFilter(filter, btn) {
+  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.tc').forEach(tc => {
+    const status = tc.dataset.status;
+    const bugs = parseInt(tc.dataset.bugs || '0', 10);
+    let show = true;
+    if (filter === 'all') show = true;
+    else if (filter === 'bugs') show = bugs > 0;
+    else show = status === filter;
+    tc.style.display = show ? '' : 'none';
+  });
+}
+function jumpToTC(tcId, ev) {
+  if (ev) ev.preventDefault();
+  const el = document.getElementById('tc-' + tcId);
+  if (!el) return;
+  // Reset filter to all so target is visible
+  const allBtn = document.querySelector('.filter[data-filter="all"]');
+  if (allBtn) applyFilter('all', allBtn);
+  // Expand
+  const idx = el.dataset.idx;
+  const body = document.getElementById('tc-body-' + idx);
+  if (body && !body.classList.contains('open')) body.classList.add('open');
+  // Scroll + flash
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.remove('flash');
+  void el.offsetWidth; // restart animation
+  el.classList.add('flash');
+}
+</script>
+</body>
+</html>
